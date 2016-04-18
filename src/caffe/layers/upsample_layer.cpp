@@ -15,18 +15,14 @@ void UpsampleLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
   CHECK((upsample_param.has_upsample_h() && upsample_param.has_upsample_w())
       || (!upsample_param.has_scale() && upsample_param.has_scale_h()
       && upsample_param.has_scale_w())
-      || (!upsample_param.has_scale_h() && !upsample_param.has_scale_w()))
-      << "upsample_h & upsample_w are required, else (DEPRECATED) "
-      << "scale OR scale_h & scale_w are required.";
-
+      || (!upsample_param.has_scale_h() && !upsample_param.has_scale_w()));
+      
   if (upsample_param.has_upsample_h() && upsample_param.has_upsample_w()) {
     upsample_h_ = upsample_param.upsample_h();
     upsample_w_ = upsample_param.upsample_w();
     CHECK_GT(upsample_h_, 1);
     CHECK_GT(upsample_w_, 1);
   } else {
-    LOG(INFO) << "Params 'pad_out_{}_' are deprecated. Please declare upsample"
-        << " height and width useing the upsample_h, upsample_w parameters.";
     if (!upsample_param.has_scale_h()) {
       scale_h_ = scale_w_ = upsample_param.scale();
       CHECK_GT(scale_h_, 1);
@@ -36,15 +32,6 @@ void UpsampleLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       CHECK_GT(scale_h_, 1);
       CHECK_GT(scale_w_, 1);
     }
-    pad_out_h_ = upsample_param.pad_out_h();
-    pad_out_w_ = upsample_param.pad_out_w();
-    CHECK(!pad_out_h_ || scale_h_ == 2) 
-        << "Output height padding compensation requires scale_h == 2, otherwise "
-        << "the output size is ill-defined.";
-    CHECK(!pad_out_w_ || scale_w_ == 2) 
-        << "Output width padding compensation requires scale_w == 2, otherwise "
-        << "the output size is ill-defined.";
-    upsample_h_ = upsample_w_ = -1;  // flag to calculate in Reshape
   }
 }
 
@@ -60,9 +47,9 @@ void UpsampleLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   CHECK_EQ(bottom[0]->height(), bottom[1]->height());
   CHECK_EQ(bottom[0]->width(), bottom[1]->width());
 
-  if (upsample_h_ <= 0 || upsample_w_ <= 0) {
-    upsample_h_ = bottom[0]->height() * scale_h_ - int(pad_out_h_);
-    upsample_w_ = bottom[0]->width() * scale_w_ - int(pad_out_w_);
+  if (scale_h_>= 1 || scale_w_ >= 1) {
+    upsample_h_ = bottom[0]->height() * scale_h_;
+    upsample_w_ = bottom[0]->width() * scale_w_;
   }
   top[0]->Reshape(bottom[0]->num(), bottom[0]->channels(), upsample_h_,
       upsample_w_);
