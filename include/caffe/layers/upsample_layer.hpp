@@ -43,7 +43,7 @@ class UpsampleLayer : public Layer<Dtype> {
   int height_;
   int width_;
   int scale_h_, scale_w_;
-  bool pad_out_h_, pad_out_w_;
+  //bool pad_out_h_, pad_out_w_;
   int upsample_h_, upsample_w_;
 };
 
