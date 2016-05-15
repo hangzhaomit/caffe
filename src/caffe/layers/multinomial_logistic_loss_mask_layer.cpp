@@ -16,7 +16,7 @@ void MultinomialLogisticLossMaskLayer<Dtype>::LayerSetUp(
     this->layer_param_.loss_param().has_ignore_label();
   if (has_ignore_label_) {
     ignore_label_ = this->layer_param_.loss_param().ignore_label();
-    DCHECK_GT(ignore_label_, 0) << "Ignore label index should be larger than 0";
+    CHECK_GT(ignore_label_, 0) << "Ignore label index should be larger than 0";
   }
 }
 
@@ -47,25 +47,26 @@ void MultinomialLogisticLossMaskLayer<Dtype>::Forward_cpu(
   int dim = bottom[0]->count() / outer_num_;
   int count = 0;
   Dtype loss = 0;
-  for (int i = 0; i < outer_num; ++i) {
+  for (int i = 0; i < outer_num_; ++i) {
     for (int j = 0; j < inner_num_; j++) {
-      const int label_value = static_cast<int>(label[i * inner_num_ + j]);
+      const int label_value = static_cast<int>(bottom_label[i * inner_num_ + j]);
       
       DCHECK_GE(label_value, 0);
-      DCHECK_LT(label_value, bottom[0].shape(1));
+      DCHECK_LT(label_value, bottom[0]->shape(1));
 
       if (has_ignore_label_ && label_value == ignore_label_) {
         continue;
       }
 
+      Dtype prob = Dtype(kLOG_THRESHOLD);
       if (label_value != 0){
-        Dtype prob = std::max(
+        prob = std::max(
           bottom_data[i * dim + label_value * inner_num_ + j]
           * bottom_mask[i * inner_num_+ j]
           , Dtype(kLOG_THRESHOLD));  
       }
       else{
-        Dtype prob = std::max(
+        prob = std::max(
             bottom_data[i * dim + label_value * inner_num_ + j]
             * (1 - bottom_mask[i * inner_num_+ j])
             , Dtype(kLOG_THRESHOLD));    
@@ -89,6 +90,7 @@ void MultinomialLogisticLossMaskLayer<Dtype>::Backward_cpu(
 
   const Dtype* bottom_data = bottom[0]->cpu_data();
   const Dtype* bottom_label = bottom[1]->cpu_data();
+  const Dtype* bottom_mask = bottom[2]->cpu_data();
   Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
   Dtype* mask_diff = bottom[2]->mutable_cpu_diff();
 
@@ -98,9 +100,9 @@ void MultinomialLogisticLossMaskLayer<Dtype>::Backward_cpu(
     
   if (propagate_down[0]) {
     int count = 0;
-    for (int i = 0; i < outer_num; ++i) {
+    for (int i = 0; i < outer_num_; ++i) {
       for (int j = 0; j < inner_num_; j++) {
-        const int label_value = static_cast<int>(label[i * inner_num_ + j]);
+        const int label_value = static_cast<int>(bottom_label[i * inner_num_ + j]);
 
         if (has_ignore_label_ && label_value == ignore_label_) {
                 continue;
@@ -115,14 +117,14 @@ void MultinomialLogisticLossMaskLayer<Dtype>::Backward_cpu(
       }
     }
     Dtype scale = - top[0]->cpu_diff()[0] / (std::max(Dtype(1.0), Dtype(count)));
-    caffe_scal(bottom[0].count(), scale, bottom_diff);
+    caffe_scal(bottom[0]->count(), scale, bottom_diff);
   }
 
   if (propagate_down[2]) {
     int count = 0;
-    for (int i = 0; i < outer_num; ++i) {
+    for (int i = 0; i < outer_num_; ++i) {
       for (int j = 0; j < inner_num_; j++) {
-        const int label_value = static_cast<int>(label[i * inner_num_ + j]);
+        const int label_value = static_cast<int>(bottom_label[i * inner_num_ + j]);
 
         if (has_ignore_label_ && label_value == ignore_label_) {
                 continue;
@@ -142,12 +144,12 @@ void MultinomialLogisticLossMaskLayer<Dtype>::Backward_cpu(
       }
     }
     Dtype scale = - top[0]->cpu_diff()[0] / (std::max(Dtype(1.0), Dtype(count)));
-    caffe_scal(bottom[2].count(), scale, mask_diff);
+    caffe_scal(bottom[2]->count(), scale, mask_diff);
   }
 
 }
 
 INSTANTIATE_CLASS(MultinomialLogisticLossMaskLayer);
-REGISTER_LAYER_CLASS(MultinomialLogisticMaskLoss);
+REGISTER_LAYER_CLASS(MultinomialLogisticLossMask);
 
 }  // namespace caffe
