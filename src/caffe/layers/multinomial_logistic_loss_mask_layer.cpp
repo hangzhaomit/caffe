@@ -8,6 +8,19 @@
 namespace caffe {
 
 template <typename Dtype>
+void MultinomialLogisticLossMaskLayer<Dtype>::LayerSetUp(
+    const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
+  LossLayer<Dtype>::LayerSetUp(bottom, top);
+
+  has_ignore_label_ =
+    this->layer_param_.loss_param().has_ignore_label();
+  if (has_ignore_label_) {
+    ignore_label_ = this->layer_param_.loss_param().ignore_label();
+    DCHECK_GT(ignore_label_, 0) << "Ignore label index should be larger than 0";
+  }
+}
+
+template <typename Dtype>
 void MultinomialLogisticLossMaskLayer<Dtype>::Reshape(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   LossLayer<Dtype>::Reshape(bottom, top);
@@ -40,6 +53,10 @@ void MultinomialLogisticLossMaskLayer<Dtype>::Forward_cpu(
       
       DCHECK_GE(label_value, 0);
       DCHECK_LT(label_value, bottom[0].shape(1));
+
+      if (has_ignore_label_ && label_value == ignore_label_) {
+        continue;
+      }
 
       if (label_value != 0){
         Dtype prob = std::max(
@@ -85,6 +102,10 @@ void MultinomialLogisticLossMaskLayer<Dtype>::Backward_cpu(
       for (int j = 0; j < inner_num_; j++) {
         const int label_value = static_cast<int>(label[i * inner_num_ + j]);
 
+        if (has_ignore_label_ && label_value == ignore_label_) {
+                continue;
+        }
+
         Dtype p = std::max(
           bottom_data[i * dim + label_value * inner_num_ + j]
           , Dtype(kLOG_THRESHOLD));  
@@ -102,6 +123,10 @@ void MultinomialLogisticLossMaskLayer<Dtype>::Backward_cpu(
     for (int i = 0; i < outer_num; ++i) {
       for (int j = 0; j < inner_num_; j++) {
         const int label_value = static_cast<int>(label[i * inner_num_ + j]);
+
+        if (has_ignore_label_ && label_value == ignore_label_) {
+                continue;
+        }
 
         Dtype m = std::max(
           bottom_mask[i * inner_num_+ j]
