@@ -306,11 +306,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-<<<<<<< HEAD
-// LayerParameter next available layer-specific ID: 146 (last added: upsample)
-=======
 // LayerParameter next available layer-specific ID: 147 (last added: recurrent_param)
->>>>>>> 2b55c9302793e293183c00dabef94d20adbd852d
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -407,7 +403,7 @@ message LayerParameter {
   optional ThresholdParameter threshold_param = 128;
   optional TileParameter tile_param = 138;
   optional WindowDataParameter window_data_param = 129;
-  optional UpsampleParameter upsample_param = 145;
+  optional UpsampleParameter upsample_param = 170;
 }
 
 // Message that stores parameters used to apply transformation
